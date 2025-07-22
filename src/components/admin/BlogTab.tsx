@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Calendar, Edit } from 'lucide-react';
+import { Plus, Trash2, Calendar, Edit, Upload, X, Image } from 'lucide-react';
 import { BlogPost } from '@/hooks/useAdminData';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,163 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
 
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Estados para file upload
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [editPreviewImage, setEditPreviewImage] = useState<string | null>(null);
+
+  // Función para crear bucket si no existe
+  const createBucketIfNotExists = async () => {
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const publicBucket = buckets?.find(bucket => bucket.name === 'public');
+      
+      if (!publicBucket) {
+        const { error } = await supabase.storage.createBucket('public', {
+          public: true,
+          fileSizeLimit: 52428800, // 50MB
+          allowedMimeTypes: ['image/*']
+        });
+        
+        if (error) {
+          console.error('Error creating bucket:', error);
+        } else {
+          console.log('Bucket "public" created successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking/creating bucket:', error);
+    }
+  };
+
+  // Función para subir imagen a Supabase Storage
+  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      // Asegurar que existe el bucket
+      await createBucketIfNotExists();
+      
+      // Generar nombre único para el archivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `blog_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `blog-images/${fileName}`;
+
+      // Subir archivo a Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('public')
+        .upload(filePath, file);
+
+      if (error) {
+        console.error('Error uploading image:', error);
+        alert('Error al subir la imagen: ' + error.message);
+        return null;
+      }
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('public')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error inesperado al subir la imagen');
+      return null;
+    }
+  };
+
+  // Handle file upload para nuevo post
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen válida');
+      return;
+    }
+
+    // Validar tamaño (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    
+    // Preview de la imagen
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Subir a Supabase
+    const imageUrl = await uploadImageToSupabase(file);
+    if (imageUrl) {
+      setNewBlogPost({
+        ...newBlogPost,
+        image_url: imageUrl
+      });
+    }
+
+    setUploadingImage(false);
+  };
+
+  // Handle file upload para editar post
+  const handleEditFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !editingPost) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona una imagen válida');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen debe ser menor a 5MB');
+      return;
+    }
+
+    setUploadingEditImage(true);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setEditPreviewImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    const imageUrl = await uploadImageToSupabase(file);
+    if (imageUrl) {
+      setEditingPost({
+        ...editingPost,
+        image_url: imageUrl
+      });
+    }
+
+    setUploadingEditImage(false);
+  };
+
+  // Limpiar preview de imagen nueva
+  const clearNewImage = () => {
+    setPreviewImage(null);
+    setNewBlogPost({
+      ...newBlogPost,
+      image_url: ''
+    });
+  };
+
+  // Limpiar preview de imagen editada
+  const clearEditImage = () => {
+    setEditPreviewImage(null);
+    if (editingPost) {
+      setEditingPost({
+        ...editingPost,
+        image_url: ''
+      });
+    }
+  };
 
   const handleAddPost = () => {
     if (newBlogPost.title && newBlogPost.excerpt && newBlogPost.content) {
@@ -45,6 +202,7 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
         category: '',
         image_url: ''
       });
+      setPreviewImage(null);
     }
   };
 
@@ -53,6 +211,7 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
       ...post,
       date: new Date(post.date).toISOString().split('T')[0]
     });
+    setEditPreviewImage(null);
     setIsEditDialogOpen(true);
   };
 
@@ -68,6 +227,7 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
       });
       setIsEditDialogOpen(false);
       setEditingPost(null);
+      setEditPreviewImage(null);
     }
   };
 
@@ -106,15 +266,49 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
             })}
             className="border-wood-200"
           />
-          <Input
-            placeholder="URL de la imagen"
-            value={newBlogPost.image_url}
-            onChange={(e) => setNewBlogPost({
-              ...newBlogPost,
-              image_url: e.target.value
-            })}
-            className="border-wood-200"
-          />
+          
+          {/* File Upload Section */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-wood-700">Imagen del artículo</label>
+            
+            {/* Preview de imagen existente o cargada */}
+            {(previewImage || newBlogPost.image_url) && (
+              <div className="relative">
+                <img 
+                  src={previewImage || newBlogPost.image_url} 
+                  alt="Preview"
+                  className="w-full h-32 object-cover rounded-lg border border-wood-200"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearNewImage}
+                  className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            {/* Input de archivo */}
+            <div className="flex items-center gap-3">
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                disabled={uploadingImage}
+                className="border-wood-200"
+              />
+              {uploadingImage && (
+                <div className="flex items-center gap-2 text-wood-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-wood-600"></div>
+                  <span className="text-sm">Subiendo...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <Textarea
             placeholder="Resumen del artículo"
             value={newBlogPost.excerpt}
@@ -133,7 +327,11 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
             })}
             className="border-wood-200 min-h-[120px]"
           />
-          <Button onClick={handleAddPost} className="btn-primary w-full">
+          <Button 
+            onClick={handleAddPost} 
+            className="btn-primary w-full"
+            disabled={uploadingImage}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Agregar Artículo
           </Button>
@@ -230,15 +428,63 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
                 })}
                 className="border-wood-200"
               />
-              <Input
-                placeholder="URL de la imagen"
-                value={editingPost.image_url}
-                onChange={(e) => setEditingPost({
-                  ...editingPost,
-                  image_url: e.target.value
-                })}
-                className="border-wood-200"
-              />
+              
+              {/* File Upload Section para editar */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-wood-700">Imagen del artículo</label>
+                
+                {((editPreviewImage || editingPost.image_url) && (editPreviewImage || editingPost.image_url)) && (
+                  <div className="relative">
+                    <img 
+                      src={editPreviewImage || editingPost.image_url} 
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded-lg border border-wood-200"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={clearEditImage}
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditFileUpload}
+                    disabled={uploadingEditImage}
+                    className="border-wood-200"
+                  />
+                  {uploadingEditImage && (
+                    <div className="flex items-center gap-2 text-wood-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-wood-600"></div>
+                      <span className="text-sm">Subiendo...</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-xs text-wood-500">
+                  O ingresa una URL manualmente:
+                </div>
+                <Input
+                  placeholder="URL de la imagen (opcional)"
+                  value={editingPost.image_url}
+                  onChange={(e) => {
+                    setEditingPost({
+                      ...editingPost,
+                      image_url: e.target.value
+                    });
+                    setEditPreviewImage(null);
+                  }}
+                  className="border-wood-200"
+                />
+              </div>
+
               <Textarea
                 placeholder="Resumen del artículo"
                 value={editingPost.excerpt}
@@ -264,7 +510,11 @@ const BlogTab = ({ blogPosts, onAddPost, onDeletePost, onUpdatePost }: BlogTabPr
                 >
                   Cancelar
                 </Button>
-                <Button onClick={handleUpdatePost} className="btn-primary">
+                <Button 
+                  onClick={handleUpdatePost} 
+                  className="btn-primary"
+                  disabled={uploadingEditImage}
+                >
                   Guardar Cambios
                 </Button>
               </div>

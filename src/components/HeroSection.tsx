@@ -87,7 +87,7 @@ const HeroSection = () => {
                 className="btn-primary group w-full"
                 size="lg"
               >
-                Solicitar Consulta Gratuita
+                Solicitar Consulta
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
@@ -163,7 +163,7 @@ const HeroSection = () => {
                 className="btn-primary group"
                 size="lg"
               >
-                Solicitar Consulta Gratuita
+                Solicitar Consulta
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button

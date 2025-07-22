@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
@@ -6,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -29,21 +29,95 @@ const AdminLogin = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simple authentication (in a real app, this would be more secure)
-    if (formData.username === 'admin' && formData.password === 'EstudioSGL2024') {
+    try {
+      // 1. Autenticar con Supabase Auth (tabla auth.users)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) {
+        toast({
+          title: "Error de autenticación",
+          description: authError.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!authData.user) {
+        toast({
+          title: "Error de autenticación",
+          description: "No se pudo autenticar el usuario.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Verificar si el usuario tiene rol de admin (opcional)
+      // Puedes verificar por email específico o metadata
+      const adminEmails = [
+"sglcrmarketing@gmail.com"
+      ];
+
+      if (!adminEmails.includes(authData.user.email || '')) {
+        // Cerrar sesión si no es admin
+        await supabase.auth.signOut();
+        toast({
+          title: "Acceso denegado",
+          description: "No tienes permisos de administrador.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Opcional: Crear/actualizar registro en admin_users para tracking
+      try {
+        await supabase
+          .from('admin_users')
+          .upsert({
+            id: authData.user.id,
+            username: authData.user.user_metadata?.username || authData.user.email?.split('@')[0],
+            email: authData.user.email,
+            password_hash: 'auth_managed', // Indicar que la password la maneja Auth
+            is_active: true,
+            last_login: new Date().toISOString()
+          }, {
+            onConflict: 'id'
+          });
+      } catch (adminUserError) {
+        // No es crítico si falla esto
+        console.log('Info: No se pudo actualizar admin_users:', adminUserError);
+      }
+
+      // 4. Guardar datos de sesión
       localStorage.setItem('adminAuthenticated', 'true');
+      localStorage.setItem('adminUser', JSON.stringify({
+        id: authData.user.id,
+        email: authData.user.email,
+        username: authData.user.user_metadata?.username || authData.user.email?.split('@')[0],
+        role: 'admin'
+      }));
+
       toast({
         title: "Acceso autorizado",
-        description: "Bienvenido al panel de administración.",
+        description: `Bienvenido ${authData.user.email}.`,
       });
+
       navigate('/admin/dashboard');
-    } else {
+
+    } catch (error) {
+      console.error('Error during authentication:', error);
       toast({
-        title: "Error de autenticación",
-        description: "Usuario o contraseña incorrectos.",
+        title: "Error del sistema",
+        description: "Ocurrió un error inesperado. Intenta nuevamente.",
         variant: "destructive",
       });
     }
+
     setIsLoading(false);
   };
 
@@ -70,16 +144,17 @@ const AdminLogin = () => {
               Panel de Administración
             </CardTitle>
             <p className="text-wood-600 text-sm">
-              Acceso restringido solo para administradores
+              Autenticación con Supabase Auth
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Input
-                  name="username"
-                  placeholder="Usuario"
-                  value={formData.username}
+                  name="email"
+                  type="email"
+                  placeholder="Email de administrador"
+                  value={formData.email}
                   onChange={handleInputChange}
                   className="border-wood-200 focus:border-wood-500"
                   required
@@ -114,12 +189,6 @@ const AdminLogin = () => {
               </Button>
             </form>
 
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-wood-50 rounded-lg border border-wood-200">
-              <p className="text-xs text-wood-600 mb-2 font-medium">Credenciales de demostración:</p>
-              <p className="text-xs text-wood-500">Usuario: admin</p>
-              <p className="text-xs text-wood-500">Contraseña: EstudioSGL2024</p>
-            </div>
           </CardContent>
         </Card>
       </div>

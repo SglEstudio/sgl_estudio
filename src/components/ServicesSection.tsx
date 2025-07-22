@@ -1,4 +1,3 @@
-
 import { 
   Calculator, 
   TrendingUp, 
@@ -7,7 +6,8 @@ import {
   Target, 
   Users, 
   Building, 
-  Globe
+  Globe,
+  Briefcase
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -23,7 +23,7 @@ const ServicesSection = () => {
       icon: Wheat,
       title: "Consultoría Agropecuaria",
       description: "Especialización en sector rural con análisis de costos, rentabilidad y gestión de empresas agropecuarias.",
-      features: ["Análisis de costos rurales", "Planificación de siembras", "Gestión de riesgos"]
+      features: ["Análisis de costos rurales", "Gestión Financiera y Fiscal", "Gestión de riesgos"]
     },
     {
       icon: TrendingUp,
@@ -60,6 +60,12 @@ const ServicesSection = () => {
       title: "Comercio Exterior",
       description: "Consultoría en operaciones de importación, exportación y trámites aduaneros.",
       features: ["Trámites aduaneros", "Documentación", "Régimen tributario"]
+    },
+    {
+      icon: Briefcase,
+      title: "Proyectos de Inversión",
+      description: "Estructuración y presentación de proyectos ante bancos, empresas, accionistas y organismos públicos.",
+      features: ["Zonas Francas", "Trading y Logística", "Admisión Temporaria", "Centros de Servicios Compartidos", "Holdings de Inversión", "Proyectos COMAP"]
     }
   ];
 
@@ -77,7 +83,7 @@ const ServicesSection = () => {
         </div>
 
         {/* Services Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service, index) => (
             <Card 
               key={index}

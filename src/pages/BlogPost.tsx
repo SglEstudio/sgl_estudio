@@ -1,132 +1,67 @@
-
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, Tag } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BlogPost {
-  id: number;
+  id: string;
   title: string;
   excerpt: string;
   content: string;
   date: string;
-  image?: string;
+  image_url: string | null;
   category: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const BlogPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState<BlogPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample blog posts - in a real app, this would come from a database or API
-  const blogPosts: BlogPost[] = [
-    {
-      id: 1,
-      title: "Nuevas Regulaciones Fiscales para el Sector Agropecuario 2024",
-      excerpt: "Analizamos los cambios más importantes en la normativa fiscal que afectan a productores rurales y empresas agropecuarias.",
-      content: `
-        <h2>Introducción</h2>
-        <p>Las nuevas regulaciones fiscales para el sector agropecuario introducen cambios significativos que afectan directamente a productores rurales y empresas del sector. En este artículo, analizamos las modificaciones más importantes y sus implicaciones.</p>
-        
-        <h3>Principales Cambios</h3>
-        <p>Entre los cambios más relevantes se encuentran:</p>
-        <ul>
-          <li>Modificaciones en el régimen de exoneraciones para inversiones en maquinaria agrícola</li>
-          <li>Nuevos criterios para la determinación de la renta presunta</li>
-          <li>Actualizaciones en los plazos de presentación de declaraciones juradas</li>
-          <li>Cambios en el tratamiento fiscal de las cooperativas agrarias</li>
-        </ul>
-        
-        <h3>Impacto en el Sector</h3>
-        <p>Estos cambios representan tanto oportunidades como desafíos para el sector agropecuario. Es fundamental que los productores y empresas se adapten a tiempo para aprovechar los beneficios y evitar incumplimientos.</p>
-        
-        <h3>Recomendaciones</h3>
-        <p>Recomendamos a nuestros clientes revisar su situación fiscal actual y consultar con nuestro equipo de especialistas para desarrollar estrategias de adaptación a las nuevas normativas.</p>
-      `,
-      date: "2024-01-15",
-      category: "Fiscal",
-      image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Planificación Financiera para Empresas Familiares",
-      excerpt: "Estrategias clave para la gestión financiera efectiva en empresas familiares del sector agropecuario.",
-      content: `
-        <h2>La Importancia de la Planificación Financiera</h2>
-        <p>La planificación financiera en empresas familiares del sector agropecuario requiere un enfoque especializado que considere tanto los aspectos familiares como los empresariales.</p>
-        
-        <h3>Desafíos Específicos</h3>
-        <p>Las empresas familiares enfrentan desafíos únicos:</p>
-        <ul>
-          <li>Separación entre patrimonio familiar y empresarial</li>
-          <li>Planificación de la sucesión generacional</li>
-          <li>Gestión de conflictos familiares en decisiones financieras</li>
-          <li>Optimización fiscal considerando la estructura familiar</li>
-        </ul>
-        
-        <h3>Estrategias Recomendadas</h3>
-        <p>Para una gestión financiera exitosa, recomendamos implementar protocolos familiares claros, establecer estructuras de gobierno corporativo adecuadas y mantener una comunicación transparente entre todos los miembros de la familia.</p>
-      `,
-      date: "2024-01-10",
-      category: "Finanzas",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Costos y Márgenes en la Producción Agrícola",
-      excerpt: "Herramientas y metodologías para el análisis de costos y optimización de márgenes en la producción agrícola.",
-      content: `
-        <h2>Análisis de Costos en la Producción Agrícola</h2>
-        <p>El análisis de costos en la producción agrícola es fundamental para la toma de decisiones estratégicas y la optimización de márgenes de rentabilidad.</p>
-        
-        <h3>Componentes del Costo</h3>
-        <p>Los principales componentes del costo agrícola incluyen:</p>
-        <ul>
-          <li>Costos directos: semillas, fertilizantes, pesticidas</li>
-          <li>Costos de maquinaria y equipamiento</li>
-          <li>Costos de mano de obra</li>
-          <li>Costos indirectos: seguros, impuestos, servicios</li>
-        </ul>
-        
-        <h3>Herramientas de Control</h3>
-        <p>Implementamos sistemas de control de costos que permiten un seguimiento detallado de cada componente, facilitando la identificación de oportunidades de mejora y optimización.</p>
-      `,
-      date: "2024-01-05",
-      category: "Costos",
-      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=400&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Sucesión Empresarial: Preparando el Futuro",
-      excerpt: "Guía completa para planificar la sucesión en empresas familiares del sector agropecuario.",
-      content: `
-        <h2>La Planificación de la Sucesión Empresarial</h2>
-        <p>La planificación de la sucesión empresarial es crucial para garantizar la continuidad y el éxito de las empresas familiares del sector agropecuario.</p>
-        
-        <h3>Elementos Clave</h3>
-        <p>Un plan de sucesión exitoso debe considerar:</p>
-        <ul>
-          <li>Identificación y preparación de sucesores</li>
-          <li>Valoración adecuada de los activos empresariales</li>
-          <li>Estructura fiscal óptima para la transición</li>
-          <li>Protocolo familiar para la gestión del cambio</li>
-        </ul>
-        
-        <h3>Proceso de Implementación</h3>
-        <p>El proceso debe iniciarse con suficiente anticipación, involucrando a todos los miembros de la familia y estableciendo criterios claros para la transición del liderazgo.</p>
-      `,
-      date: "2023-12-28",
-      category: "Sucesión",
-      image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&h=400&fit=crop"
+  // Función para obtener el artículo desde Supabase
+  const fetchBlogPost = async (postId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Artículo no encontrado');
+      }
+
+      setPost(data);
+    } catch (err) {
+      console.error('Error fetching blog post:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido al cargar el artículo');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   useEffect(() => {
-    const foundPost = blogPosts.find(p => p.id === parseInt(id || ''));
-    setPost(foundPost || null);
+    if (id) {
+      fetchBlogPost(id);
+    } else {
+      setError('ID de artículo no válido');
+      setLoading(false);
+    }
   }, [id]);
 
   const formatDate = (dateString: string) => {
@@ -138,23 +73,89 @@ const BlogPost = () => {
     });
   };
 
-  if (!post) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <div className="container mx-auto px-4 py-20">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-wood-900 mb-4">Artículo no encontrado</h1>
-            <p className="text-wood-700 mb-8">El artículo que buscas no existe o ha sido eliminado.</p>
-            <Button onClick={() => navigate('/')} className="btn-primary">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al inicio
-            </Button>
+  const scrollToContact = () => {
+    navigate('/', { state: { scrollTo: 'contacto' } });
+  };
+
+  // Componente de loading
+  const LoadingSkeleton = () => (
+    <div className="min-h-screen">
+      <Header />
+      <article className="py-20">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <Skeleton className="h-10 w-32 mb-8" />
+          
+          <header className="mb-8">
+            <div className="flex items-center gap-4 mb-4">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-12 w-full mb-4" />
+            <Skeleton className="h-6 w-3/4" />
+          </header>
+
+          <Skeleton className="w-full h-64 md:h-96 mb-8 rounded-lg" />
+
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
           </div>
         </div>
-        <Footer />
+      </article>
+      <Footer />
+    </div>
+  );
+
+  // Componente de error
+  const ErrorDisplay = () => (
+    <div className="min-h-screen">
+      <Header />
+      <div className="container mx-auto px-4 py-20">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-8">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-red-900 mb-4">
+              {error?.includes('no encontrado') ? 'Artículo no encontrado' : 'Error al cargar el artículo'}
+            </h1>
+            <p className="text-red-700 mb-6">
+              {error || 'Ocurrió un error inesperado al cargar el artículo.'}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => navigate('/')} 
+                className="btn-primary"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al inicio
+              </Button>
+              {id && (
+                <Button 
+                  onClick={() => fetchBlogPost(id)}
+                  variant="outline"
+                  className="border-red-300 text-red-700 hover:bg-red-50"
+                >
+                  <Loader2 className="h-4 w-4 mr-2" />
+                  Intentar nuevamente
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    );
+      <Footer />
+    </div>
+  );
+
+  // Estados de loading y error
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (error || !post) {
+    return <ErrorDisplay />;
   }
 
   return (
@@ -196,33 +197,83 @@ const BlogPost = () => {
           </header>
 
           {/* Article image */}
-          {post.image && (
+          {post.image_url && (
             <div className="mb-8">
               <img 
-                src={post.image} 
+                src={post.image_url} 
                 alt={post.title}
                 className="w-full h-64 md:h-96 object-cover rounded-lg shadow-lg"
+                onError={(e) => {
+                  // Ocultar imagen si no carga
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
           )}
 
           {/* Article content */}
-          <div 
-            className="prose prose-lg max-w-none prose-headings:text-wood-900 prose-p:text-wood-700 prose-li:text-wood-700 prose-strong:text-wood-900"
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
+          <div className="prose prose-lg max-w-none prose-headings:text-wood-900 prose-p:text-wood-700 prose-li:text-wood-700 prose-strong:text-wood-900 prose-a:text-wood-600 hover:prose-a:text-wood-800">
+            {/* Renderizar contenido HTML de forma segura */}
+            <div 
+              dangerouslySetInnerHTML={{ 
+                __html: post.content.replace(/\n/g, '<br />') 
+              }}
+            />
+          </div>
 
-          {/* Footer section */}
+          {/* Article metadata */}
+          <div className="mt-8 pt-6 border-t border-wood-200">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-wood-600">
+              <span>Publicado el {formatDate(post.date)}</span>
+              {post.updated_at !== post.created_at && (
+                <span>• Actualizado el {formatDate(post.updated_at)}</span>
+              )}
+              <span>• Categoría: {post.category}</span>
+            </div>
+          </div>
+
+          {/* Call to action section */}
           <div className="mt-12 pt-8 border-t border-wood-200">
             <div className="bg-wood-50 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-wood-900 mb-2">
                 ¿Necesitas asesoramiento profesional?
               </h3>
               <p className="text-wood-700 mb-4">
-                Nuestro equipo de contadoras especializadas en el sector agropecuario está listo para ayudarte.
+                Nuestro equipo de contadoras especializadas en el sector agropecuario está listo para ayudarte con tus necesidades contables y financieras.
               </p>
-              <Button className="btn-primary">
-                Contactar ahora
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  className="btn-primary"
+                  onClick={scrollToContact}
+                >
+                  Contactar ahora
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-wood-300 text-wood-700 hover:bg-wood-100"
+                  onClick={() => navigate('/')}
+                >
+                  Ver más servicios
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Related articles section (opcional - para futuro) */}
+          <div className="mt-12 pt-8 border-t border-wood-200">
+            <h3 className="text-lg font-semibold text-wood-900 mb-4">
+              Artículos relacionados
+            </h3>
+            <div className="bg-wood-50 rounded-lg p-6 text-center">
+              <p className="text-wood-600 mb-4">
+                Descubre más contenido especializado en nuestro blog
+              </p>
+              <Button 
+                variant="outline"
+                className="border-wood-300 text-wood-700 hover:bg-wood-100"
+                onClick={() => navigate('/blog')}
+              >
+                Ver todos los artículos
               </Button>
             </div>
           </div>

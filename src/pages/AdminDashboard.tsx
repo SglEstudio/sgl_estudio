@@ -56,29 +56,29 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <AdminStats 
+        {/* <AdminStats 
           testimonialsCount={testimonials.length}
           blogPostsCount={blogPosts.length}
-        />
+        /> */}
 
         {/* Tabs */}
-        <Tabs defaultValue="content" className="space-y-6">
+        <Tabs defaultValue="blog" className="space-y-6">
           <TabsList className="bg-white border border-wood-200">
-            <TabsTrigger value="content" className="data-[state=active]:bg-wood-100">
+            {/* <TabsTrigger value="content" className="data-[state=active]:bg-wood-100">
               Contenido
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="blog" className="data-[state=active]:bg-wood-100">
               Blog
             </TabsTrigger>
-            <TabsTrigger value="testimonials" className="data-[state=active]:bg-wood-100">
+            {/* <TabsTrigger value="testimonials" className="data-[state=active]:bg-wood-100">
               Testimonios
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="messages" className="data-[state=active]:bg-wood-100">
               Mensajes
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-wood-100">
+            {/* <TabsTrigger value="settings" className="data-[state=active]:bg-wood-100">
               Configuración
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="content">

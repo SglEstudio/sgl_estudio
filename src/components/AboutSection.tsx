@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 const AboutSection = () => {
   const teamMembers = [
     {
-      name: "Sol Andrade",
+      name: "María Sol Andrade Despaux",
       title: "Especialista en Gestión Agroindustrial",
       // subtitle: "Ex-Presidenta CCEAU 2021-2023",
       experience: "Contadora Pública",
@@ -23,7 +23,7 @@ const AboutSection = () => {
       ],
     },
     {
-      name: "Lorena Falero",
+      name: "Lorena Falero Rodríguez",
       title: "Especialista en Gestión Administrativa",
       // subtitle: "Contabilidad Aplicada y Estrategia",
       experience: "Contadora Pública",
@@ -145,7 +145,7 @@ const AboutSection = () => {
                 Creemos que el conocimiento tiene valor cuando se comparte. Por
                 eso, más allá del trabajo técnico, llevamos adelante un
                 compromiso con la sociedad, ofreciendo{" "}
-                <strong>charlas informativas gratuitas</strong> sobre temas que
+                <strong>charlas informativas</strong> sobre temas que
                 impactan en la vida cotidiana:
               </p>
               <div className="grid gap-2">

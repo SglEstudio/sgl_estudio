@@ -5,7 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import emailjs from "emailjs-com";
+import { supabase } from '@/integrations/supabase/client';
+
+// Configuración de EmailJS - Reemplaza con tus credenciales
+const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+console.log(SERVICE_ID, TEMPLATE_ID, PUBLIC_KEY);
 
 /** 🔸 Convierte cualquier número local a tel:+598… */
 const toUruguayTelHref = (raw: string) => {
@@ -14,7 +22,6 @@ const toUruguayTelHref = (raw: string) => {
 };
 
 const ContactSection = () => {
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,14 +38,37 @@ const ContactSection = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.email || !formData.message) {
+      alert("Por favor completá nombre, email y mensaje.");
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      toast({
-        title: 'Mensaje enviado',
-        description: 'Nos pondremos en contacto contigo a la brevedad.'
-      });
+
+    try {
+      // 1. Enviar email con EmailJS
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, formData, PUBLIC_KEY);
+
+      // 2. Guardar también en Supabase para el admin panel
+      const { error: dbError } = await supabase
+        .from('contact_messages')
+        .insert({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          subject: 'Consulta desde formulario web',
+          message: formData.message,
+          status: 'unread'
+        });
+
+      if (dbError) {
+        console.error('Error saving to database:', dbError);
+      }
+
+      alert("¡Mensaje enviado exitosamente!");
       setFormData({
         name: '',
         email: '',
@@ -46,8 +76,12 @@ const ContactSection = () => {
         company: '',
         message: ''
       });
+    } catch (error) {
+      console.error("Error al enviar el mensaje:", error);
+      alert("Hubo un error al enviar el mensaje.");
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const contactInfo = [
@@ -85,7 +119,7 @@ const ContactSection = () => {
             Contáctanos
           </h2>
           <p className="text-xl text-wood-600 max-w-3xl mx-auto leading-relaxed">
-            Estamos aquí para ayudarte. Solicita tu consulta gratuita y descubre
+            Estamos aquí para ayudarte. Solicita tu consulta y descubre
             cómo podemos optimizar la gestión financiera de tu empresa.
           </p>
         </div>
@@ -96,7 +130,7 @@ const ContactSection = () => {
             <Card className="border-wood-200 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl text-wood-900">
-                  Solicitar Consulta Gratuita
+                  Solicitar Consulta
                 </CardTitle>
               </CardHeader>
               <CardContent>
