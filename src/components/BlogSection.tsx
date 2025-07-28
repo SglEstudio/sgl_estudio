@@ -8,9 +8,24 @@ import {
   CarouselNext, 
   CarouselPrevious 
 } from '@/components/ui/carousel';
-import { Calendar, ArrowRight, AlertCircle } from 'lucide-react';
+import { 
+  Calendar, 
+  ArrowRight, 
+  AlertCircle, 
+  Share2,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Link2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 
 interface BlogPost {
@@ -70,6 +85,33 @@ const BlogSection = () => {
     });
   };
 
+  // Función para compartir en redes sociales
+  const sharePost = (platform: string, post: BlogPost) => {
+    const url = `${window.location.origin}/blog/${post.id}`;
+    const text = `${post.title} - ${post.excerpt}`;
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(url);
+        return;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
+  };
+
   // Componente de loading
   const LoadingSkeleton = () => (
     <div className="max-w-6xl mx-auto">
@@ -89,7 +131,10 @@ const BlogSection = () => {
               <Skeleton className="h-4 w-full mb-2" />
               <Skeleton className="h-4 w-full mb-2" />
               <Skeleton className="h-4 w-2/3 mb-4" />
-              <Skeleton className="h-10 w-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-10 flex-1" />
+                <Skeleton className="h-10 w-10" />
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -134,6 +179,106 @@ const BlogSection = () => {
     </div>
   );
 
+  // Componente de tarjeta de blog
+  const BlogCard = ({ post }: { post: BlogPost }) => (
+    <Card className="h-full border-wood-200 hover:shadow-lg transition-all duration-300 hover:border-wood-300">
+      {/* Imagen mejorada con mejor centrado */}
+      <div className="relative aspect-video overflow-hidden rounded-t-lg bg-wood-100">
+        <img 
+          src={post.image_url || '/placeholder.svg'} 
+          alt={post.title}
+          className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-300"
+          style={{
+            objectPosition: 'center center'
+          }}
+          onError={(e) => {
+            // Fallback si la imagen no carga
+            (e.target as HTMLImageElement).src = '/placeholder.svg';
+          }}
+        />
+        {/* Overlay sutil para mejorar la legibilidad del contenido sobre la imagen */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+      </div>
+      
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-wood-600 bg-wood-100 px-2 py-1 rounded">
+            {post.category}
+          </span>
+          <div className="flex items-center text-wood-500 text-sm">
+            <Calendar className="h-4 w-4 mr-1" />
+            {formatDate(post.date)}
+          </div>
+        </div>
+        <CardTitle className="text-lg font-bold text-wood-900 line-clamp-2">
+          {post.title}
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="pt-0">
+        <p className="text-wood-700 text-sm mb-4 line-clamp-3">
+          {post.excerpt}
+        </p>
+        
+        {/* Botones de acción */}
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 border-wood-300 text-wood-700 hover:bg-wood-50"
+            onClick={() => navigate(`/blog/${post.id}`)}
+          >
+            Leer más
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+          
+          {/* Botón de compartir */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-wood-300 text-wood-700 hover:bg-wood-50 px-3"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem 
+                onClick={() => sharePost('facebook', post)}
+                className="cursor-pointer"
+              >
+                <Facebook className="h-4 w-4 mr-2 text-blue-600" />
+                Compartir en Facebook
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => sharePost('twitter', post)}
+                className="cursor-pointer"
+              >
+                <Twitter className="h-4 w-4 mr-2 text-sky-500" />
+                Compartir en Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => sharePost('linkedin', post)}
+                className="cursor-pointer"
+              >
+                <Linkedin className="h-4 w-4 mr-2 text-blue-700" />
+                Compartir en LinkedIn
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => sharePost('copy', post)}
+                className="cursor-pointer"
+              >
+                <Link2 className="h-4 w-4 mr-2 text-wood-600" />
+                Copiar enlace
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <section className="py-20 bg-gradient-to-br from-wood-50 to-sage-50">
       <div className="container mx-auto px-4">
@@ -161,47 +306,7 @@ const BlogSection = () => {
                 <CarouselContent className="-ml-2 md:-ml-4">
                   {blogPosts.map((post) => (
                     <CarouselItem key={post.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                      <Card className="h-full border-wood-200 hover:shadow-lg transition-all duration-300 hover:border-wood-300">
-                        <div className="aspect-video overflow-hidden rounded-t-lg">
-                          <img 
-                            src={post.image_url || '/placeholder.svg'} 
-                            alt={post.title}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                            onError={(e) => {
-                              // Fallback si la imagen no carga
-                              (e.target as HTMLImageElement).src = '/placeholder.svg';
-                            }}
-                          />
-                        </div>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-wood-600 bg-wood-100 px-2 py-1 rounded">
-                              {post.category}
-                            </span>
-                            <div className="flex items-center text-wood-500 text-sm">
-                              <Calendar className="h-4 w-4 mr-1" />
-                              {formatDate(post.date)}
-                            </div>
-                          </div>
-                          <CardTitle className="text-lg font-bold text-wood-900 line-clamp-2">
-                            {post.title}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <p className="text-wood-700 text-sm mb-4 line-clamp-3">
-                            {post.excerpt}
-                          </p>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full border-wood-300 text-wood-700 hover:bg-wood-50"
-                            onClick={() => navigate(`/blog/${post.id}`)}
-                          >
-                            Leer más
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      <BlogCard post={post} />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
@@ -218,47 +323,7 @@ const BlogSection = () => {
                     : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto'
               }`}>
                 {blogPosts.map((post) => (
-                  <Card key={post.id} className="h-full border-wood-200 hover:shadow-lg transition-all duration-300 hover:border-wood-300">
-                    <div className="aspect-video overflow-hidden rounded-t-lg">
-                      <img 
-                        src={post.image_url || '/placeholder.svg'} 
-                        alt={post.title}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          // Fallback si la imagen no carga
-                          (e.target as HTMLImageElement).src = '/placeholder.svg';
-                        }}
-                      />
-                    </div>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-wood-600 bg-wood-100 px-2 py-1 rounded">
-                          {post.category}
-                        </span>
-                        <div className="flex items-center text-wood-500 text-sm">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {formatDate(post.date)}
-                        </div>
-                      </div>
-                      <CardTitle className="text-lg font-bold text-wood-900 line-clamp-2">
-                        {post.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <p className="text-wood-700 text-sm mb-4 line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full border-wood-300 text-wood-700 hover:bg-wood-50"
-                        onClick={() => navigate(`/blog/${post.id}`)}
-                      >
-                        Leer más
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  <BlogCard key={post.id} post={post} />
                 ))}
               </div>
             )}

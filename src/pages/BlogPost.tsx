@@ -1,8 +1,25 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, Tag, AlertCircle, Loader2 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Calendar, 
+  Tag, 
+  AlertCircle, 
+  Loader2,
+  Share2,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Link2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,6 +92,36 @@ const BlogPost = () => {
 
   const scrollToContact = () => {
     navigate('/', { state: { scrollTo: 'contacto' } });
+  };
+
+  // Función para compartir en redes sociales
+  const sharePost = (platform: string) => {
+    if (!post) return;
+    
+    const url = window.location.href;
+    const text = `${post.title} - ${post.excerpt}`;
+    
+    let shareUrl = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(url);
+        // Podrías mostrar un toast de confirmación aquí
+        return;
+    }
+    
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    }
   };
 
   // Componente de loading
@@ -167,24 +214,70 @@ const BlogPost = () => {
           {/* Back button */}
           <Button 
             variant="outline" 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/blog')}
             className="mb-8 border-wood-300 text-wood-700 hover:bg-wood-50"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
+            Volver al blog
           </Button>
 
           {/* Article header */}
           <header className="mb-8">
-            <div className="flex items-center gap-4 mb-4">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-wood-100 text-wood-800">
-                <Tag className="h-3 w-3 mr-1" />
-                {post.category}
-              </span>
-              <div className="flex items-center text-wood-600">
-                <Calendar className="h-4 w-4 mr-2" />
-                {formatDate(post.date)}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-wood-100 text-wood-800">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {post.category}
+                </span>
+                <div className="flex items-center text-wood-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {formatDate(post.date)}
+                </div>
               </div>
+              
+              {/* Botón de compartir en header */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-wood-300 text-wood-700 hover:bg-wood-50"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Compartir
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('facebook')}
+                    className="cursor-pointer"
+                  >
+                    <Facebook className="h-4 w-4 mr-2 text-blue-600" />
+                    Compartir en Facebook
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('twitter')}
+                    className="cursor-pointer"
+                  >
+                    <Twitter className="h-4 w-4 mr-2 text-sky-500" />
+                    Compartir en Twitter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('linkedin')}
+                    className="cursor-pointer"
+                  >
+                    <Linkedin className="h-4 w-4 mr-2 text-blue-700" />
+                    Compartir en LinkedIn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('copy')}
+                    className="cursor-pointer"
+                  >
+                    <Link2 className="h-4 w-4 mr-2 text-wood-600" />
+                    Copiar enlace
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             <h1 className="text-4xl font-bold text-wood-900 mb-4 leading-tight">
@@ -196,13 +289,13 @@ const BlogPost = () => {
             </p>
           </header>
 
-          {/* Article image */}
+          {/* Article image - MEJORADA */}
           {post.image_url && (
-            <div className="mb-8">
+            <div className="mb-8 bg-wood-100 rounded-lg overflow-hidden flex items-center justify-center" style={{ minHeight: '400px' }}>
               <img 
                 src={post.image_url} 
                 alt={post.title}
-                className="w-full h-64 md:h-96 object-cover rounded-lg shadow-lg"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
                 onError={(e) => {
                   // Ocultar imagen si no carga
                   (e.target as HTMLImageElement).style.display = 'none';
@@ -223,12 +316,57 @@ const BlogPost = () => {
 
           {/* Article metadata */}
           <div className="mt-8 pt-6 border-t border-wood-200">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-wood-600">
-              <span>Publicado el {formatDate(post.date)}</span>
-              {post.updated_at !== post.created_at && (
-                <span>• Actualizado el {formatDate(post.updated_at)}</span>
-              )}
-              <span>• Categoría: {post.category}</span>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-wood-600">
+                <span>Publicado el {formatDate(post.date)}</span>
+                {post.updated_at !== post.created_at && (
+                  <span>• Actualizado el {formatDate(post.updated_at)}</span>
+                )}
+                <span>• Categoría: {post.category}</span>
+              </div>
+              
+              {/* Segundo botón de compartir en metadata */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="border-wood-300 text-wood-700 hover:bg-wood-50"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('facebook')}
+                    className="cursor-pointer"
+                  >
+                    <Facebook className="h-4 w-4 mr-2 text-blue-600" />
+                    Compartir en Facebook
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('twitter')}
+                    className="cursor-pointer"
+                  >
+                    <Twitter className="h-4 w-4 mr-2 text-sky-500" />
+                    Compartir en Twitter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('linkedin')}
+                    className="cursor-pointer"
+                  >
+                    <Linkedin className="h-4 w-4 mr-2 text-blue-700" />
+                    Compartir en LinkedIn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => sharePost('copy')}
+                    className="cursor-pointer"
+                  >
+                    <Link2 className="h-4 w-4 mr-2 text-wood-600" />
+                    Copiar enlace
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -259,7 +397,7 @@ const BlogPost = () => {
             </div>
           </div>
 
-          {/* Related articles section (opcional - para futuro) */}
+          {/* Related articles section */}
           <div className="mt-12 pt-8 border-t border-wood-200">
             <h3 className="text-lg font-semibold text-wood-900 mb-4">
               Artículos relacionados

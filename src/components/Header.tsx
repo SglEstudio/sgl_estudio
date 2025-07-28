@@ -1,17 +1,30 @@
-
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Calculator, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMenuOpen(false);
+    // Si estamos en cualquier página que no sea la principal, navegar a / primero
+    if (location.pathname !== '/') {
+      navigate('/', { state: { scrollTo: sectionId } });
+    } else {
+      // Si ya estamos en la página principal, hacer scroll directo
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
     }
+    setIsMenuOpen(false);
+  };
+
+  const handleLogoClick = () => {
+    navigate('/');
+    setIsMenuOpen(false);
   };
 
   return (
@@ -19,7 +32,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
             <img 
               src="/lovable-uploads/704c3aee-dcbe-4299-a27c-e871076c6c7e.png" 
               alt="SGL Contadores Asociados" 
@@ -46,6 +59,12 @@ const Header = () => {
               className="text-wood-700 hover:text-wood-900 font-medium transition-colors"
             >
               Sobre Nosotros
+            </button>
+            <button 
+              onClick={() => navigate('/blog')}
+              className="text-wood-700 hover:text-wood-900 font-medium transition-colors"
+            >
+              Blog
             </button>
             <button 
               onClick={() => scrollToSection('contacto')}
@@ -99,6 +118,12 @@ const Header = () => {
                 className="text-left text-wood-700 hover:text-wood-900 font-medium py-2 transition-colors"
               >
                 Sobre Nosotros
+              </button>
+              <button 
+                onClick={() => navigate('/blog')}
+                className="text-left text-wood-700 hover:text-wood-900 font-medium py-2 transition-colors"
+              >
+                Blog
               </button>
               <button 
                 onClick={() => scrollToSection('contacto')}

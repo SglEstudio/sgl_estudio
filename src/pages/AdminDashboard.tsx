@@ -30,7 +30,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const isAuthenticated = localStorage.getItem('adminAuthenticated');
     if (!isAuthenticated) {
-      navigate('/admin/login');
+      navigate('/admin');
     }
   }, [navigate]);
 
