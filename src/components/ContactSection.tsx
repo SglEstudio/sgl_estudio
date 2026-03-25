@@ -7,10 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import emailjs from "emailjs-com";
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const USE_EDGE_EMAIL = import.meta.env.VITE_CONTACT_USE_EDGE === "true";
-
-// EmailJS (si VITE_CONTACT_USE_EDGE no es true)
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
@@ -22,6 +20,7 @@ const toUruguayTelHref = (raw: string) => {
 };
 
 const ContactSection = () => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,30 +41,24 @@ const ContactSection = () => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.message) {
-      alert("Por favor completá nombre, email y mensaje.");
+      toast({
+        title: 'Faltan datos',
+        description: 'Completá nombre, email y mensaje.',
+        variant: 'destructive',
+      });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      if (USE_EDGE_EMAIL) {
-        const { data, error: fnError } = await supabase.functions.invoke(
-          "send-email",
-          { body: formData },
+      if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
+        throw new Error(
+          "Configurá VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID y VITE_EMAILJS_PUBLIC_KEY en .env.local.",
         );
-        if (fnError) throw fnError;
-        if (data && typeof data === "object" && "error" in data && data.error) {
-          throw new Error(String((data as { error: string }).error));
-        }
-      } else {
-        if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
-          throw new Error(
-            "Configurá EmailJS (VITE_EMAILJS_*) o activá VITE_CONTACT_USE_EDGE=true y desplegá send-email.",
-          );
-        }
-        await emailjs.send(SERVICE_ID, TEMPLATE_ID, formData, PUBLIC_KEY);
       }
+
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, formData, PUBLIC_KEY);
 
       // Guardar también en Supabase para el admin panel
       const { error: dbError } = await supabase
@@ -83,7 +76,10 @@ const ContactSection = () => {
         console.error('Error saving to database:', dbError);
       }
 
-      alert("¡Mensaje enviado exitosamente!");
+      toast({
+        title: 'Mensaje enviado',
+        description: 'Te responderemos a la brevedad. Gracias por escribirnos.',
+      });
       setFormData({
         name: '',
         email: '',
@@ -93,7 +89,13 @@ const ContactSection = () => {
       });
     } catch (error) {
       console.error("Error al enviar el mensaje:", error);
-      alert("Hubo un error al enviar el mensaje.");
+      const description =
+        error instanceof Error ? error.message : 'Intentá de nuevo en unos minutos.';
+      toast({
+        title: 'No se pudo enviar',
+        description,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,1 @@
 project_id = "ukcjxazkukqpfszenavj"
-
-# Formulario público: el cliente llama sin JWT de usuario.
-[functions.send-email]
-verify_jwt = false
