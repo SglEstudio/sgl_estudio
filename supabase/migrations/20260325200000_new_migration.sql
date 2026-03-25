@@ -1,0 +1,1 @@
+-- Migración new-migration (placeholder; añade aquí el SQL necesario).

@@ -8,12 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import emailjs from "emailjs-com";
 import { supabase } from '@/integrations/supabase/client';
 
-// Configuración de EmailJS - Reemplaza con tus credenciales
+const USE_EDGE_EMAIL = import.meta.env.VITE_CONTACT_USE_EDGE === "true";
+
+// EmailJS (si VITE_CONTACT_USE_EDGE no es true)
 const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
-
-console.log(SERVICE_ID, TEMPLATE_ID, PUBLIC_KEY);
 
 /** 🔸 Convierte cualquier número local a tel:+598… */
 const toUruguayTelHref = (raw: string) => {
@@ -49,10 +49,25 @@ const ContactSection = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Enviar email con EmailJS
-      await emailjs.send(SERVICE_ID, TEMPLATE_ID, formData, PUBLIC_KEY);
+      if (USE_EDGE_EMAIL) {
+        const { data, error: fnError } = await supabase.functions.invoke(
+          "send-email",
+          { body: formData },
+        );
+        if (fnError) throw fnError;
+        if (data && typeof data === "object" && "error" in data && data.error) {
+          throw new Error(String((data as { error: string }).error));
+        }
+      } else {
+        if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
+          throw new Error(
+            "Configurá EmailJS (VITE_EMAILJS_*) o activá VITE_CONTACT_USE_EDGE=true y desplegá send-email.",
+          );
+        }
+        await emailjs.send(SERVICE_ID, TEMPLATE_ID, formData, PUBLIC_KEY);
+      }
 
-      // 2. Guardar también en Supabase para el admin panel
+      // Guardar también en Supabase para el admin panel
       const { error: dbError } = await supabase
         .from('contact_messages')
         .insert({
